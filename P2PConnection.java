@@ -176,7 +176,7 @@ public class P2PConnection extends KeepAlive {
 				&&  !data.contains(":fail")
 				&&  !data.contains(":ok")
 			)
-			|| heartbeat
+			|| heartbeat || true
 		)
 			System.out.println(msg);
 
@@ -200,6 +200,7 @@ public class P2PConnection extends KeepAlive {
 			case "looktype:REGULAR":
 			case "looktype:SUPER":
 				this.response = trimPacketData(packet);
+				System.out.println("RECEIVED: "+ response);
 				receivedReply.release();
 				break;
 
