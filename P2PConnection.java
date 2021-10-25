@@ -76,17 +76,28 @@ public class P2PConnection extends KeepAlive {
 		if(P2PTYPE.valueOf(response.split(":")[1]) != P2PTYPE.SUPER)
 			throw new UnsatisfiedLinkError("Cannot connect with a regular node!");
 		send(targetAddress, targetPort, "connect");
+		this.targetAddress = targetAddress;
+		this.targetPort = targetPort;
 
 		// 2º Checkin connection and activate KeepAlive
 		receivedReply.acquire();
 		super.setTarget(targetAddress, targetPort);
 
-		// 3º Update DHT
+		// 3º
+		// If the connection is a new regular node, import the files
+		// If is a super node, reorganize the network topology
 		if(table != null)
 			for (Map.Entry<String, String> entry: table.entrySet()) {
 			    send(targetAddress, targetPort, "include>"+entry.getValue());
 				receivedReply.acquire();
 			}
+		else
+			send(targetAddress, targetPort,
+				("topology>"+
+					targetAddress+":"+targetPort +">"+
+					getLocalAddress()+":"+socket.getLocalPort()
+				)
+			);
 
 		return true;
 	}
@@ -100,6 +111,18 @@ public class P2PConnection extends KeepAlive {
 
 	/* Sockets Access---------------------------------------------------------*/
 	
+	public void topology (DatagramPacket packet, String target, String dst) {
+		String key = this.targetAddress+":"+this.targetPort;
+		if(target.equals(key)) {
+			String[] args = dst.split(":");
+			try {
+				connect(InetAddress.getByName(args[0]), Integer.parseInt(args[1]), null);
+			} catch (Exception e) {}
+		} else {
+			send(createPacket("topology>"+target+">"+dst));
+		}
+	}
+
 	public void include (DatagramPacket packet) {
 		String hash = trimPacketData(packet).split(">")[1];
 		String key = packetKey(packet);
@@ -109,7 +132,7 @@ public class P2PConnection extends KeepAlive {
 			return;
 		}
 
-		LinkedList<String> list = table.get(key).content;
+		List<String> list = table.get(key).content;
 		if(list == null){
 			list = new LinkedList<String>();
 			table.get(key).content = list;
@@ -122,7 +145,7 @@ public class P2PConnection extends KeepAlive {
 	public void connect (DatagramPacket packet) {
 		String key = packetKey(packet);
 
-		if(!table.containsKey(key)){
+		if(!table.containsKey(key)) {
 			table.put(key, new Node());
 		}
 
@@ -149,10 +172,11 @@ public class P2PConnection extends KeepAlive {
 		)
 			System.out.println(msg);
 
-		String method = "";
+		String[] vargs = data.split(">");
+		String 	 method = "";
 
 		try {
-			method = data.split(">")[0];
+			method = vargs[0];
 		} catch (ArrayIndexOutOfBoundsException aioobe) {
 			method = data;
 		}
@@ -187,6 +211,10 @@ public class P2PConnection extends KeepAlive {
 			case "include:ok":
 				this.response = trimPacketData(packet);
 				receivedReply.release();
+				break;
+
+			case "topology":
+				topology(packet, vargs[1], vargs[2]);
 				break;
 
 
@@ -266,6 +294,9 @@ public class P2PConnection extends KeepAlive {
 	{ send(packet.getAddress(), packet.getPort(), content); }
 	private void send (InetAddress targetAddress, Integer targetPort, String content) {
 		DatagramPacket packet = createPacket(targetAddress, targetPort, content);
+		send(packet);
+	}
+	private void send (DatagramPacket packet) {
 		try { socket.send(packet); }
 		catch(IOException ioe) { ioe.printStackTrace(); }
 	}
@@ -328,4 +359,22 @@ public class P2PConnection extends KeepAlive {
 			);
 	}
 
+	/* Search throught the network interface for the Nat CIDR */
+	private InetAddress getLocalAddress() {
+		Enumeration e = null;
+		try {
+			e = NetworkInterface.getNetworkInterfaces();
+		} catch (Exception ignore) {}
+		while(e.hasMoreElements()) {
+		    NetworkInterface n = (NetworkInterface) e.nextElement();
+		    Enumeration ee = n.getInetAddresses();
+		    InetAddress inet = null;
+		    while (ee.hasMoreElements()) {
+		        inet = (InetAddress) ee.nextElement();
+		        if(inet.getHostAddress().startsWith(P2PNode.NATCIDR))
+		        	return inet;
+		    }
+		}
+	    return null;
+	}
 }

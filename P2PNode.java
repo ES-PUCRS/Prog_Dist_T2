@@ -22,7 +22,8 @@ enum P2PTYPE  {
 
 public class P2PNode extends P2PConnection {
 
-	public static int timeout = 5000;
+	public static final String NATCIDR = "192.168.100.";
+	public static final int timeout = 5000;
 
 	private Map<String, String> table; 
 

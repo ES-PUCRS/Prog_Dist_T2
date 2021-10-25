@@ -24,11 +24,11 @@ then
 
 	elif [[ $1 -eq "2" ]]
 	then
-		xterm -T "$localtype_1 NODE 1" -ls -e $LOAD$args_1 &
+		xterm -T 76x20+718+50 "$localtype_1 NODE 1" -ls -e $LOAD$args_1 &
 		sleep 3
 		xterm -T "$localtype_2 NODE 2" -ls -e $LOAD$args_2 &
 		sleep 3
-		xterm -T "$localtype_3 NODE 3" -ls -e $LOAD$args_3 &
+		xterm -T 76x20+718+300"$localtype_3 NODE 3" -ls -e $LOAD$args_3 &
 
 	elif [[ $1 -eq "clear" ]]
 	then

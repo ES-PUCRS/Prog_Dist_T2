@@ -28,7 +28,8 @@ public class KeepAlive extends Thread {
 			targetPort
 		);
 		
-		this.start();
+		if(!this.isAlive())
+			this.start();
 	}
 
 	public void run() {
