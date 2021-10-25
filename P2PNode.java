@@ -27,6 +27,10 @@ public class P2PNode extends P2PConnection {
 
 	private Map<String, String> table; 
 
+	protected InetAddress targetAddress = null;
+	protected Integer targetPort = null;
+	protected P2PTYPE nodeType = null;
+
 	public P2PNode (DatagramSocket socket, P2PTYPE nodeType)
 	throws IOException {
 		super(socket, nodeType);
@@ -86,6 +90,10 @@ public class P2PNode extends P2PConnection {
 			System.out.println("]");
 		}
 
+		this.targetAddress = targetAddress;
+		this.targetPort = targetPort;
+		this.nodeType = nodeType;
+
 		new Thread(console).start();
 	}
 
@@ -93,10 +101,13 @@ public class P2PNode extends P2PConnection {
 		public void run() {
 			Scanner  in = new Scanner(System.in);
 			String[] vargs = null;
-			String   input = "";
-			String   comnd = "";
-			while(!comnd.equals("quit")) {
-				input = vargs = comnd = null;
+			String   input = null;
+			String   comnd = null;
+			
+			do {
+				input = comnd = null;
+				vargs = null;
+
 				input = in.nextLine();
 				vargs = input.split("\\s");
 				comnd = vargs[0];
@@ -105,7 +116,7 @@ public class P2PNode extends P2PConnection {
 					superConsole(targetAddress, targetPort, input, vargs, comnd);
 				else
 					regularConsole(targetAddress, targetPort, input, vargs, comnd);
-			}
+			} while(!comnd.equals("quit"));
 		}
 	};
 
