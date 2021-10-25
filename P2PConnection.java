@@ -9,7 +9,6 @@ public class P2PConnection extends KeepAlive {
 	
 	private volatile DatagramSocket socket;
 	private final P2PTYPE nodeType;
-	private String response;
 
 	private InetAddress targetAddress;
 	private Integer targetPort;
@@ -21,8 +20,9 @@ public class P2PConnection extends KeepAlive {
 
     
 	/* Thread access */
-	protected volatile receivedPacket;
-	private final String not_found = "!METHOD NOT FOUND!";
+	protected final String not_found = "!METHOD NOT FOUND!";
+	protected volatile DatagramPacket receivedPacket;
+	protected volatile String response;
 
 	private Map<String, Node> table;
 
@@ -51,6 +51,7 @@ public class P2PConnection extends KeepAlive {
 		super(socket);
 		this.enabled = true;
 		this.hearbeatLog = false;
+		this.receivedPacket = null;
 
 		this.socket = socket;
 		this.response = "";
@@ -244,7 +245,7 @@ public class P2PConnection extends KeepAlive {
 				case "looktype:REGULAR":
 				case "looktype:SUPER":
 					send(receivedPacket, "confirmation");
-					this.response = trimPacketData(receivedPacket);
+					response = trimPacketData(receivedPacket);
 					System.out.println("RECEIVED: "+ response);
 					receivedReply.release();
 					break;
@@ -254,7 +255,7 @@ public class P2PConnection extends KeepAlive {
 					connect(receivedPacket);
 					break;
 				case "connect:ok":
-					this.response = trimPacketData(receivedPacket);
+					response = trimPacketData(receivedPacket);
 					receivedReply.release();
 					break;
 				
@@ -264,7 +265,7 @@ public class P2PConnection extends KeepAlive {
 					break;
 				case "include:fail":
 				case "include:ok":
-					this.response = trimPacketData(receivedPacket);
+					response = trimPacketData(receivedPacket);
 					receivedReply.release();
 					break;
 
@@ -289,8 +290,7 @@ public class P2PConnection extends KeepAlive {
 				}catch(Exception e) {}
 			}
 		}
-
-	}
+	};
 
 	/* Runnable Threads -------------------------------------------------*/
 
@@ -355,7 +355,7 @@ public class P2PConnection extends KeepAlive {
 			while(enabled) {
 				try {
 					socket.receive(received);
-					receivedPackage = clonePacket(received)
+					receivedPacket = clonePacket(received);
 					new Thread(router).start();
 				} catch (Exception e) { e.printStackTrace(); }
 
