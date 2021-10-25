@@ -71,7 +71,7 @@ public class P2PNode extends P2PConnection {
 		String[] input = null;
 		String   comnd = "";
 
-		while(true) {
+		while(!comnd.equals("quit")) {
 			input = in.nextLine().split("\\s");
 			comnd = input[0];
 
@@ -81,7 +81,7 @@ public class P2PNode extends P2PConnection {
 					break;
 
 				case "hash":
-					try { System.out.println(gerarHash(input[1])); }
+					try { System.out.println(hash(input[1])); }
 					catch (Exception some) { some.printStackTrace(); }
 					break;
 
@@ -96,6 +96,12 @@ public class P2PNode extends P2PConnection {
 
 	}
 
+	/* 	Funções de hash
+	 *	Código ecoado do trecho:
+	 * 	Secure Hash Algorithm 2 (SHA-2)
+	 * 	Atualizado 23 May 2020 - 22:50, Rafael Guimarães Sakurai
+	 * 	http://www.universidadejava.com.br/outros/criptografia-funcao-hash/
+	 */
 	public static String hash(String in) throws Exception {
 	    MessageDigest algorithm = MessageDigest.getInstance("SHA-256");
 	    byte hash[] = algorithm.digest(in.getBytes("UTF-8"));
