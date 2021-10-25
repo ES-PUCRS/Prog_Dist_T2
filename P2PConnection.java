@@ -113,7 +113,7 @@ public class P2PConnection extends KeepAlive {
 	
 	public void topology (DatagramPacket packet, String target, String dst) {
 		String key = this.targetAddress+":"+this.targetPort;
-		if(target.equals(key)) {
+		if(target.equals(key) || (this.targetAddress == null && this.targetPort == null)) {
 			String[] args = dst.split(":");
 			try {
 				connect(InetAddress.getByName(args[0]), Integer.parseInt(args[1]), null);
@@ -163,7 +163,7 @@ public class P2PConnection extends KeepAlive {
 	private void router (DatagramPacket packet) {
 		String data = trimPacketData(packet);
 		String msg = packet.getAddress() + ":" + packet.getPort() + "> " + data;
-		if (msg.length() > 50) msg = msg.substring(0,70) + "...";
+		if (msg.length() > 70) msg = msg.substring(0,70) + "...";
 		if( ( 		!data.contains("heartbeat")
 				&&  !data.contains(":fail")
 				&&  !data.contains(":ok")
