@@ -129,6 +129,14 @@ public class P2PNode extends P2PConnection {
 				super.status();
 				break;
 
+			case "kennelStackTrace":
+				super.kennelStackTrace();
+				break;
+
+			case "release":
+				super.release();
+				break;
+
 			case "quit":
 				super.killConnection();
 				break;

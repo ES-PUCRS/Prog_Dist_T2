@@ -19,6 +19,11 @@ public class P2PConnection extends KeepAlive {
 	private boolean enabled;
 	private boolean DEBUG = false;
 
+    
+	/* Thread access */
+	protected volatile receivedPacket;
+	private final String not_found = "!METHOD NOT FOUND!";
+
 	private Map<String, Node> table;
 
 	class Node {
@@ -67,14 +72,29 @@ public class P2PConnection extends KeepAlive {
 
 	public void status() {
 		System.out.println(
-			"Watchdog enabled: " 	+ enabled + 
-			"\nKennel isAlive: " 	+ kennel.isAlive() +
-			"\n\tstate: " 		 	+ kennel.getState() +
-			"\nSemaphore permits: " + receivedReply.availablePermits() +
-			"\nTarget: "				+ targetAddress+":"+targetPort +
-			"\n "
+			"\n[" + 
+			"\n\tWatchdog enabled: " 	+ enabled + 
+			"\n\t\tKennel isAlive: " 	+ kennel.isAlive() +
+			"\n\t\tstate: " 		 	+ kennel.getState() +
+			"\n\t\tpriority: " 		+ kennel.getPriority() +
+			"\n\tSemaphore permits: " + receivedReply.availablePermits() +
+			"\n\tTarget: "			+ targetAddress+":"+targetPort +
+			"\n]"
 		);
 	}
+	
+		
+	public void kennelStackTrace() {
+		System.out.println(
+			"\n\n\tStackTrace: "		+ Arrays.toString(kennel.getStackTrace())+
+			"\n\n\tUncaughtException: " + kennel.getUncaughtExceptionHandler()
+		);
+	}
+
+	public void release() {
+		receivedReply.release();
+	}
+
 
 	public void killConnection() {
 		enabled = false;
@@ -86,10 +106,11 @@ public class P2PConnection extends KeepAlive {
 		// if(DEBUG)
 		System.out.println(
 			"Stablishing connection to "+ targetAddress +":"+targetPort+
-			" ("+receivedReply.availablePermits()+")"
+			" ("+receivedReply.availablePermits()+") " + kennel.getState()
 		);
 
 		send(targetAddress, targetPort, "looktype");
+		System.out.println("State "+ kennel.getState());
 
 		// 1º Validate if it is a supernode 
 		receivedReply.acquire();
@@ -187,84 +208,86 @@ public class P2PConnection extends KeepAlive {
 	/*
 	 *	Router defines what should happen with the received packet 
 	 */
-	private final String not_found = "!METHOD NOT FOUND!";
-	private void router (DatagramPacket packet) {
-		String data = trimPacketData(packet);
-		String msg = packet.getAddress() + ":" + packet.getPort() + "> " + data;
-		if (msg.length() > 70) msg = msg.substring(0,70) + "...";
-		if( ( 		!data.contains("heartbeat")
-				&&  !data.contains(":fail")
-				&&  !data.contains(":ok")
+	private Runnable router = new Runnable() {
+
+		@Override
+		public void run() {
+			String data = trimPacketData(receivedPacket);
+			String msg = receivedPacket.getAddress() + ":" + receivedPacket.getPort() + "> " + data;
+			if (msg.length() > 70) msg = msg.substring(0,70) + "...";
+			if( ( 		!data.contains("heartbeat")
+					&&  !data.contains(":fail")
+					&&  !data.contains(":ok")
+				)
+				|| hearbeatLog || DEBUG
 			)
-			|| hearbeatLog || DEBUG
-		)
-			System.out.println(msg);
+				System.out.println(msg);
 
-		String[] vargs = data.split(">");
-		String 	 method = "";
+			String[] vargs = data.split(">");
+			String 	 method = "";
 
-		try {
-			method = vargs[0];
-		} catch (ArrayIndexOutOfBoundsException aioobe) {
-			method = data;
-		}
-
-		if(method.equals("not_found"))
-			throw new AssertionError(data);
-		else
-		switch (method) {
-			case "looktype":
-				DatagramPacket pckt = createPacket(packet, "looktype:" + nodeType.toString());
-				waitResponse(pckt);
-				send(pckt);
-				break;
-			case "looktype:REGULAR":
-			case "looktype:SUPER":
-				send(packet, "confirmation");
-				this.response = trimPacketData(packet);
-				System.out.println("RECEIVED: "+ response);
-				receivedReply.release();
-				break;
-
-
-			case "connect":
-				connect(packet);
-				break;
-			case "connect:ok":
-				this.response = trimPacketData(packet);
-				receivedReply.release();
-				break;
-			
-
-			case "include":
-				include(packet);
-				break;
-			case "include:fail":
-			case "include:ok":
-				this.response = trimPacketData(packet);
-				receivedReply.release();
-				break;
-
-			case "topology":
-				topology(packet, vargs[1], vargs[2]);
-				break;
-
-
-			case "heartbeat":
-			String key = packetKey(packet);
-				heart(key);
-				break;
-
-			case "confirmation":
-				waitResponse(null);
-				break;
-
-			default:
 			try {
-				Thread.sleep(5000);
-				send(packet, (not_found + ">" + method));
-			}catch(Exception e) {}
+				method = vargs[0];
+			} catch (ArrayIndexOutOfBoundsException aioobe) {
+				method = data;
+			}
 
+			if(method.equals("not_found"))
+				throw new AssertionError(data);
+			else
+			switch (method) {
+				case "looktype":
+					DatagramPacket pckt = createPacket(receivedPacket, "looktype:" + nodeType.toString());
+					waitResponse(pckt);
+					send(pckt);
+					break;
+				case "looktype:REGULAR":
+				case "looktype:SUPER":
+					send(receivedPacket, "confirmation");
+					this.response = trimPacketData(receivedPacket);
+					System.out.println("RECEIVED: "+ response);
+					receivedReply.release();
+					break;
+
+
+				case "connect":
+					connect(receivedPacket);
+					break;
+				case "connect:ok":
+					this.response = trimPacketData(receivedPacket);
+					receivedReply.release();
+					break;
+				
+
+				case "include":
+					include(receivedPacket);
+					break;
+				case "include:fail":
+				case "include:ok":
+					this.response = trimPacketData(receivedPacket);
+					receivedReply.release();
+					break;
+
+				case "topology":
+					topology(receivedPacket, vargs[1], vargs[2]);
+					break;
+
+
+				case "heartbeat":
+				String key = packetKey(receivedPacket);
+					heart(key);
+					break;
+
+				case "confirmation":
+					waitResponse(null);
+					break;
+
+				default:
+				try {
+					Thread.sleep(5000);
+					send(receivedPacket, (not_found + ">" + method));
+				}catch(Exception e) {}
+			}
 		}
 
 	}
@@ -332,7 +355,8 @@ public class P2PConnection extends KeepAlive {
 			while(enabled) {
 				try {
 					socket.receive(received);
-					router(clonePacket(received));
+					receivedPackage = clonePacket(received)
+					new Thread(router).start();
 				} catch (Exception e) { e.printStackTrace(); }
 
 				Arrays.fill(data, (byte) 0);
