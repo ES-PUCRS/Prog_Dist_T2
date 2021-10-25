@@ -117,7 +117,11 @@ public class P2PConnection extends KeepAlive {
 		if(target.equals(key) || (this.targetAddress == null && this.targetPort == null)) {
 			String[] args = dst.split(":");
 			try {
-				connect(InetAddress.getByName(args[0].substring(1, args[0].length())), Integer.parseInt(args[1]), null);
+				connect(
+					InetAddress.getByName(args[0].substring(1, args[0].length())),
+					Integer.parseInt(args[1]),
+					null
+				);
 			} catch (Exception e) { e.printStackTrace(); }
 		} else {
 			send(createPacket("topology>"+target+">"+dst));
@@ -191,6 +195,7 @@ public class P2PConnection extends KeepAlive {
 		switch (method) {
 			case "looktype":
 				send(packet, "looktype:" + nodeType.toString());
+				System.out.println("SENT looktype:"+nodeType.toString());
 				break;
 			case "looktype:REGULAR":
 			case "looktype:SUPER":
