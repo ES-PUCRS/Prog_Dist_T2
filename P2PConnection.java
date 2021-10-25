@@ -194,11 +194,14 @@ public class P2PConnection extends KeepAlive {
 		else
 		switch (method) {
 			case "looktype":
-				send(packet, "looktype:" + nodeType.toString());
+				DatagramPacket pckt = createPacket(packet, "looktype:" + nodeType.toString());
+				waitResponse(pckt);
+				send(pckt);
 				System.out.println("SENT looktype:"+nodeType.toString());
 				break;
 			case "looktype:REGULAR":
 			case "looktype:SUPER":
+				waitResponse(null);
 				this.response = trimPacketData(packet);
 				System.out.println("RECEIVED: "+ response);
 				receivedReply.release();
@@ -246,6 +249,32 @@ public class P2PConnection extends KeepAlive {
 
 	/* Runnable Threads -------------------------------------------------*/
 
+	TimerTask taskResponse = null;
+	Timer timerResponse = null;
+	public void waitResponse(DatagramPacket packet) {
+	    if(timer != null) {
+            task.cancel();
+            timerResponse.cancel();
+            timerResponse.purge();
+        }
+
+        task = new TimerTask() {
+            @Override
+            public void run() {
+            	System.out.println("Sending the packet again");
+                send(packet);
+                waitResponse(packet);
+            }
+        };
+
+        if(packet != null) {
+	        timerResponse = new Timer();
+	        timerResponse.schedule(taskResponse, P2PNode.timeout);
+    	} else {
+    		System.out.println("Response received");
+    	}
+    }
+
 	public void heart(String key) {
 		Node node = table.get(key);
 		if(node == null) return;
@@ -283,8 +312,8 @@ public class P2PConnection extends KeepAlive {
 					socket.receive(received);
 					router(clonePacket(received));
 				} catch (IOException ioe) {}
-				
-				Arrays.fill(data, (byte) 0);
+				data = new byte[1024];
+				// Arrays.fill(data, (byte) 0);
 			}
 
 			if(socket != null)
