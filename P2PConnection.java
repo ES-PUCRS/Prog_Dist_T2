@@ -78,10 +78,11 @@ public class P2PConnection extends KeepAlive {
 		super.setTarget(targetAddress, targetPort);
 
 		// 3º Update DHT
-		for (Map.Entry<String, String> entry: table.entrySet()) {
-		    send(targetAddress, targetPort, "include>"+entry.getValue());
-			receivedReply.acquire();
-		}
+		if(table != null)
+			for (Map.Entry<String, String> entry: table.entrySet()) {
+			    send(targetAddress, targetPort, "include>"+entry.getValue());
+				receivedReply.acquire();
+			}
 
 		return true;
 	}

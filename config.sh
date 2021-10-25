@@ -4,8 +4,8 @@ MAIN_CLASS=P2PNode
 LOAD="java -cp ./_class $MAIN_CLASS "
 
 
-supernode_ip_1="192.168.100.4"
-supernode_port_1="9024"
+supernode_ip_1="192.168.100.5"
+supernode_port_1="9005"
 localtype_1=SUPER
 localport_1=9004
 

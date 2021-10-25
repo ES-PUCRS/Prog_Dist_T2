@@ -18,8 +18,8 @@ then
 
 	elif [[ $1 -eq "1" ]]
 	then
-		xterm -T "$localtype_1 NODE 1" -ls -e $LOAD$args_1 &
-		sleep 3
+		xterm -geometry 76x18+718+50  -T "$localtype_1 NODE 1" -ls -e $LOAD$args_1 &
+		sleep 2
 		xterm -T "$localtype_2 NODE 2" -ls -e $LOAD$args_2 &
 
 	elif [[ $1 -eq "2" ]]
