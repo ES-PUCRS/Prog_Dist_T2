@@ -13,7 +13,6 @@ public class P2PConnection extends KeepAlive {
 	private Integer targetPort;
 
 	private Semaphore receivedReply;
-
 	private boolean enabled;
 
 	public P2PConnection(DatagramSocket socket, P2PTYPE nodeType)
@@ -32,6 +31,13 @@ public class P2PConnection extends KeepAlive {
 		catch(InterruptedException ie) {}
 	}
 
+	public void killConnection() {
+		enabled = false;
+		socket.close();
+	}
+
+
+
 	public boolean connect(InetAddress targetAddress, Integer targetPort)
 	throws InterruptedException, IndexOutOfBoundsException, UnsatisfiedLinkError {
 		send(targetAddress, targetPort, "looktype");
@@ -48,15 +54,17 @@ public class P2PConnection extends KeepAlive {
 		return true;
 	}
 
-	public void killConnection() {
-		enabled = false;
-		socket.close();
-	}
 
 
+	/*
+	 *	Router defines what should happen with the received packet 
+	 */
+	private final String not_found = "!METHOD NOT FOUND!";
 	private void router(DatagramPacket packet) {
 		String data = trimPacketData(packet);
-		System.out.println("Received> " + data);
+		System.out.println(
+			packet.getAddress() + ":" + packet.getPort() + "> " + data
+		);
 		String method = "";
 
 		try {
@@ -65,9 +73,11 @@ public class P2PConnection extends KeepAlive {
 			method = data;
 		}
 
+		if(method.equals("not_found"))
+			throw new AssertionError(data);
 		switch (method) {
 			case "looktype":
-				send(packet, "looktype:"+nodeType.toString());
+				send(packet, "looktype:" + nodeType.toString());
 				break;
 
 			case "looktype:REGULAR":
@@ -81,7 +91,7 @@ public class P2PConnection extends KeepAlive {
 				break;
 
 			default:
-				send(packet, "!METHOD NOT FOUND!");
+				send(packet, (not_found + ">" + method));
 
 		}
 
@@ -117,8 +127,8 @@ public class P2PConnection extends KeepAlive {
 		DatagramPacket packet = createPacket(targetAddress, targetPort, content);
 		try { socket.send(packet); }
 		catch(IOException ioe) { ioe.printStackTrace(); }
-		System.out.println("SENT " + receivedReply.availablePermits());
 	}
+
 
 	/* Cut packet data String unused */
 	private String trimPacketData(DatagramPacket packet) {
@@ -129,7 +139,20 @@ public class P2PConnection extends KeepAlive {
 		);
 	}
 
-	/* Create a packet to be sent to the applicant */
+
+	/* Clone the packet to be able to change the state and resend it */
+	private DatagramPacket clonePacket(DatagramPacket packet) {
+		return
+			new DatagramPacket (
+				packet.getData(),
+				packet.getLength(),
+				packet.getAddress(),
+				packet.getPort()
+			);
+	}
+
+
+	/* Create a packet to be sent to the applicant ++Method overload */
 	private DatagramPacket createPacket (String data)
 	{ return createPacket( data.getBytes()); }
 	private DatagramPacket createPacket (byte[] data) {
@@ -164,15 +187,4 @@ public class P2PConnection extends KeepAlive {
 			);
 	}
 
-
-	/* Clone the packet to be able to change the state and resend it */
-	private DatagramPacket clonePacket(DatagramPacket packet) {
-		return
-			new DatagramPacket (
-				packet.getData(),
-				packet.getLength(),
-				packet.getAddress(),
-				packet.getPort()
-			);
-	}
 }
