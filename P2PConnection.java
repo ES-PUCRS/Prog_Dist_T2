@@ -33,6 +33,7 @@ public class P2PConnection extends KeepAlive {
 
 	public void killConnection() {
 		enabled = false;
+		socket.close();
 	}
 
 	private Runnable watchdog = new Runnable() {
@@ -44,14 +45,11 @@ public class P2PConnection extends KeepAlive {
 				try {
 					socket.receive(received);
 					router(clonePacket(received));
-				} catch (IOException e) {
-					if(socket.isConnected())
-						socket.close();
-				}
+				} catch (IOException ioe) {}
 				
 				Arrays.fill(data, (byte) 0);
 			}
-			
+
 			if(socket != null)
 				socket.close();
 		}

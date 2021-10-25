@@ -5,14 +5,17 @@ import java.util.*;
 public class KeepAlive extends Thread {
 	protected volatile DatagramSocket socket;
 	protected DatagramPacket packet;
+	protected boolean alive;
 	protected boolean LOG;
 	protected byte[] data;
 
 	public KeepAlive(DatagramSocket socket)
 	throws IOException {
 		this.socket = socket;
-		LOG = false;
+
+		alive = true;
 		data = null;
+		LOG = false;
 	}
 
 	public void toggleLog() { LOG = !LOG; }
@@ -25,16 +28,17 @@ public class KeepAlive extends Thread {
 			targetAddress,
 			targetPort
 		);
+		
+		this.start();
 	}
 
 	public void run() {
-		while (true) {
+		while (alive) {
 			try {
 				socket.send(packet);
-			} catch (IOException e) {
-				if(socket.isConnected())
-					socket.close();
-			}
+			} catch (SocketException se) {
+				alive = false;
+			} catch (IOException ioe) {}
 			
 			try {
 				Thread.sleep(P2PNode.timeout);

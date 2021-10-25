@@ -53,12 +53,17 @@ public class P2PNode extends P2PConnection {
 	}
 
 	private void script(InetAddress targetAddress, Integer targetPort) {
+		Scanner in = new Scanner(System.in);
+		String input = "";
+		
 		while(true) {
-			Scanner in = new Scanner(System.in);
-			String input = in.nextLine();
-			super.connect(targetAddress, targetPort);
-			if(input.equals("quit"))
+			input = in.nextLine();
+			if(input.equals("quit")){
+				super.killConnection();
 				break;
+			}
+
+			super.connect(targetAddress, targetPort);
 		}
 
 	}
