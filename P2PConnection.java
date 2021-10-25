@@ -16,7 +16,7 @@ public class P2PConnection extends KeepAlive {
 	private Semaphore receivedReply;
 	private boolean hearbeatLog;
 	private boolean enabled;
-	private boolean DEBUG = true;
+	private boolean DEBUG = false;
 
     
 	/* Thread access */
@@ -106,14 +106,13 @@ public class P2PConnection extends KeepAlive {
 
 	public boolean connect (InetAddress targetAddress, Integer targetPort, Map<String,String> table)
 	throws InterruptedException, IndexOutOfBoundsException, UnsatisfiedLinkError {
-		// if(DEBUG)
-		System.out.println(
-			"Stablishing connection to "+ targetAddress +":"+targetPort+
-			" ("+receivedReply.availablePermits()+") " + kennel.getState()
-		);
+		if(DEBUG)
+			System.out.println(
+				"Stablishing connection to "+ targetAddress +":"+targetPort+
+				" ("+receivedReply.availablePermits()+") " + kennel.getState()
+			);
 
 		send(targetAddress, targetPort, "looktype");
-		System.out.println("State "+ kennel.getState());
 
 		// 1º Validate if it is a supernode 
 		receivedReply.acquire();
@@ -170,9 +169,6 @@ public class P2PConnection extends KeepAlive {
 		} else {
 			send(createPacket("topology>"+target+">"+dst));
 		}
-
-		System.out.println("address:: " + this.targetAddress);
-		System.out.println("port:: " + this.targetPort);
 	}
 
 	public void include (DatagramPacket packet) {
@@ -219,7 +215,7 @@ public class P2PConnection extends KeepAlive {
 			DatagramPacket receivedPacket = null;
 			try {
 				receivedPacket = createPacket(
-					InetAddress.getByName(vars[0].substring(0, vars[0].length())),
+					InetAddress.getByName(vars[0].substring(1, vars[0].length())),
 					Integer.parseInt(vars[1]),
 					receivedPacketData
 				);
@@ -256,7 +252,6 @@ public class P2PConnection extends KeepAlive {
 				case "looktype:SUPER":
 					send(receivedPacket, "confirmation");
 					response = trimPacketData(receivedPacket);
-					System.out.println("RECEIVED: "+ response);
 					receivedReply.release();
 					break;
 
