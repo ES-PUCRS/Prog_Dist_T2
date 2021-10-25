@@ -17,7 +17,7 @@ public class P2PConnection extends KeepAlive {
 	private Semaphore receivedReply;
 	private boolean heartbeat;
 	private boolean enabled;
-	private boolean DEBUG = true;
+	private boolean DEBUG = false;
 
 	private Map<String, Node> table;
 
@@ -70,7 +70,12 @@ public class P2PConnection extends KeepAlive {
 
 	public boolean connect (InetAddress targetAddress, Integer targetPort, Map<String,String> table)
 	throws InterruptedException, IndexOutOfBoundsException, UnsatisfiedLinkError {
-		System.out.println("Stablishing connection. . . " + receivedReply.availablePermits());
+		// if(DEBUG)
+		System.out.println(
+			"Stablishing connection to "+ targetAddress +":"+targetPort+
+			"("+receivedReply.availablePermits()+")"
+		);
+
 		send(targetAddress, targetPort, "looktype");
 
 		// 1º Validate if it is a supernode 
@@ -118,10 +123,10 @@ public class P2PConnection extends KeepAlive {
 		if(target.equals(key) || (this.targetAddress == null && this.targetPort == null)) {
 			String[] args = dst.split(":");
 			try {
-				send(
+				connect(
 					InetAddress.getByName(args[0].substring(1, args[0].length())),
 					Integer.parseInt(args[1]),
-					"connect"
+					null
 				);
 			} catch (Exception e) { e.printStackTrace(); }
 		} else {
@@ -312,7 +317,6 @@ public class P2PConnection extends KeepAlive {
 				new DatagramPacket(data, data.length);
 			while(enabled) {
 				try {
-					System.out.println("READING:");
 					socket.receive(received);
 					router(clonePacket(received));
 				} catch (Exception e) { e.printStackTrace(); }
@@ -341,7 +345,7 @@ public class P2PConnection extends KeepAlive {
 	}
 	private void send (DatagramPacket packet) {
 		if(DEBUG)
-			System.out.println("send " + trimPacketData(packet) + " TO:"+packet.getAddress()+":"+packet.getPort());
+			System.out.println("send " + trimPacketData(packet) + " > TO: "+packet.getAddress()+":"+packet.getPort());
 		try { socket.send(packet); }
 		catch(IOException ioe) { ioe.printStackTrace(); }
 	}

@@ -77,11 +77,6 @@ public class P2PNode extends P2PConnection {
 	}
 
 	private void script(InetAddress targetAddress, Integer targetPort, P2PTYPE nodeType) {
-		Scanner  in = new Scanner(System.in);
-		String[] vargs = null;
-		String   input = "";
-		String   comnd = "";
-
 		if(nodeType == P2PTYPE.REGULAR){
 			readFile("dataset");
 			System.out.println("[");
@@ -91,17 +86,29 @@ public class P2PNode extends P2PConnection {
 			System.out.println("]");
 		}
 
-		while(!comnd.equals("quit")) {
-			input = in.nextLine();
-			vargs = input.split("\\s");
-			comnd = vargs[0];
-
-			if(nodeType == P2PTYPE.SUPER)
-				superConsole(targetAddress, targetPort, input, vargs, comnd);
-			else
-				regularConsole(targetAddress, targetPort, input, vargs, comnd);
-		}
+		new Thread(console).start();
 	}
+
+	private Runnable console = new Runnable() {
+		public void run() {
+			Scanner  in = new Scanner(System.in);
+			String[] vargs = null;
+			String   input = "";
+			String   comnd = "";
+			while(!comnd.equals("quit")) {
+				input = vargs = comnd = null;
+				input = in.nextLine();
+				vargs = input.split("\\s");
+				comnd = vargs[0];
+
+				if(nodeType == P2PTYPE.SUPER)
+					superConsole(targetAddress, targetPort, input, vargs, comnd);
+				else
+					regularConsole(targetAddress, targetPort, input, vargs, comnd);
+			}
+		}
+	};
+
 
 	/* Console Interface -------------------------------------------------*/
 

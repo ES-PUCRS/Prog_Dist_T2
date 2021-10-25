@@ -37,6 +37,7 @@ public class KeepAlive extends Thread {
 			try {
 				socket.send(packet);
 			} catch (SocketException se) {
+				se.printStackTrace();
 				alive = false;
 			} catch (Exception e) { e.printStackTrace(); }
 			
