@@ -42,7 +42,7 @@ public class KeepAlive extends Thread {
 			} catch (Exception e) { e.printStackTrace(); }
 			
 			try {
-				Thread.sleep(P2PNode.timeout-2000);
+				Thread.sleep(P2PNode.timeout/2);
 			} catch(InterruptedException ignore) { ignore.printStackTrace(); }
 		}
 	}

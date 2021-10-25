@@ -106,7 +106,7 @@ public class P2PConnection extends KeepAlive {
 
 	public boolean connect (InetAddress targetAddress, Integer targetPort, Map<String,String> table)
 	throws InterruptedException, IndexOutOfBoundsException, UnsatisfiedLinkError {
-		if(DEBUG)
+		if(true)
 			System.out.println(
 				"Stablishing connection to "+ targetAddress +":"+targetPort+
 				" ("+receivedReply.availablePermits()+") " + kennel.getState()
@@ -128,7 +128,7 @@ public class P2PConnection extends KeepAlive {
 
 		// 3º
 		// If the connection is a new regular node, import the files
-		// If is a super node, reorganize the network topology
+		// If is a super node, reorganize the network topologyt
 		if(table != null) {
 			for (Map.Entry<String, String> entry: table.entrySet()) {
 			    send(targetAddress, targetPort, "include>"+entry.getValue());
@@ -157,7 +157,13 @@ public class P2PConnection extends KeepAlive {
 	
 	public void topology (DatagramPacket packet, String target, String dst) {
 		String key = this.targetAddress+":"+this.targetPort;
-		if(target.equals(getLocalAddress()+":"+socket.getLocalPort())) return;
+
+		System.out.println("Key: " + key);
+		System.out.println(target + " == key: " + target.equals(key));
+		System.out.println("targetAddress: " + this.targetAddress);
+		System.out.println("targetPort: " + this.targetPort);
+
+		// if(target.equals(getLocalAddress()+":"+socket.getLocalPort())) return;
 		if(target.equals(key) || (this.targetAddress == null && this.targetPort == null)) {
 			String[] args = dst.split(":");
 			try {
@@ -251,7 +257,6 @@ public class P2PConnection extends KeepAlive {
 					break;
 				case "looktype:REGULAR":
 				case "looktype:SUPER":
-					send(receivedPacket, "confirmation");
 					response = trimPacketData(receivedPacket);
 					receivedReply.release();
 					break;
@@ -281,12 +286,7 @@ public class P2PConnection extends KeepAlive {
 
 
 				case "heartbeat":
-				String key = packetKey(receivedPacket);
-					heart(key);
-					break;
-
-				case "confirmation":
-					// waitResponse(null);
+					heart(receivedPacketSource);
 					break;
 
 				default:
@@ -299,32 +299,6 @@ public class P2PConnection extends KeepAlive {
 	};
 
 	/* Runnable Threads -------------------------------------------------*/
-
-	// TimerTask taskResponse = null;
-	// Timer timerResponse = null;
-	// public void waitResponse(DatagramPacket packet) {
-	//     if(timerResponse != null) {
- //            taskResponse.cancel();
- //            timerResponse.cancel();
- //            timerResponse.purge();
- //        }
-
- //        taskResponse = new TimerTask() {
- //            @Override
- //            public void run() {
- //            	System.out.println("Sending the packet again");
- //                send(packet);
- //                waitResponse(packet);
- //            }
- //        };
-
- //        if(packet != null) {
-	//         timerResponse = new Timer();
-	//         timerResponse.schedule(taskResponse, P2PNode.timeout);
- //    	} else {
- //    		System.out.println("Response received");
- //    	}
- //    }
 
 	public void heart(String key) {
 		Node node = table.get(key);
