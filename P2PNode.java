@@ -29,15 +29,18 @@ public class P2PNode extends P2PConnection {
 	public P2PNode (DatagramSocket socket, P2PTYPE nodeType)
 	throws IOException {
 		super(socket, nodeType);
-		table = new HashMap<String,String>();
+
+		if(nodeType == P2PTYPE.REGULAR)
+			table = new HashMap<String,String>();
 	}
 
 	public static void main(String args[]) throws IOException {
 		if (args.length < 2 || args.length > 3) {
-			System.out.println("Correct call: java P2PNode <Node type (super/regular)> <localport> [super node ip:port]");
+			System.out.println("Usage: java P2PNode <Node type (super/regular)> <localport> [super node ip:port]");
 			return;
 		}
-
+		System.out.println(Arrays.toString(args));
+		
 		InetAddress targetAddress = null;
 		Integer targetPort = null;
 		DatagramSocket socket = null;
@@ -69,14 +72,23 @@ public class P2PNode extends P2PConnection {
 		}
 
 		new P2PNode(socket, nodeType)
-			.script(targetAddress, targetPort);
+			.script(targetAddress, targetPort, nodeType);
 	}
 
-	private void script(InetAddress targetAddress, Integer targetPort) {
+	private void script(InetAddress targetAddress, Integer targetPort, P2PTYPE nodeType) {
 		Scanner  in = new Scanner(System.in);
 		String[] vargs = null;
 		String   input = "";
 		String   comnd = "";
+
+		if(nodeType == P2PTYPE.REGULAR){
+			readFile("dataset");
+			System.out.println("[");
+			for (String key: table.keySet()) {
+			    System.out.println("\t" + key);
+			}
+			System.out.println("]");
+		}
 
 		while(!comnd.equals("quit")) {
 			input = in.nextLine();
@@ -84,25 +96,34 @@ public class P2PNode extends P2PConnection {
 			comnd = vargs[0];
 
 			if(nodeType == P2PTYPE.SUPER)
-				superConsole(input, vargs, comnd);
+				superConsole(targetAddress, targetPort, input, vargs, comnd);
 			else
-				regularConsole(input, vargs, comnd);
+				regularConsole(targetAddress, targetPort, input, vargs, comnd);
 		}
 	}
 
-	private void superConsole(String input, String[] vargs, String comnd) {
+	/* Console Interface -------------------------------------------------*/
+
+	private void superConsole(InetAddress targetAddress, Integer targetPort, String input, String[] vargs, String comnd) {
 		switch (comnd) {
 			case "quit":
 				super.killConnection();
 				break;
 
 			case "table":
-				try { System.out.println(table); }
-				catch (Exception some) { some.printStackTrace(); }
+				System.out.println(table);
+				break;
+
+			case "toggleBeatLog":
+				super.toggleLog();
+				break;
+
+			case "toggleBeat":
+				super.toggleAlive();
 				break;
 
 			case "connect":
-				try { super.connect(targetAddress, targetPort); }
+				try { super.connect(targetAddress, targetPort, table); }
 				catch (Exception e)
 					{ e.printStackTrace(); }
 				catch (Error err)
@@ -115,7 +136,7 @@ public class P2PNode extends P2PConnection {
 		}
 	}
 
-	private void regularConsole(String input, String[] vargs, String comnd) {
+	private void regularConsole(InetAddress targetAddress, Integer targetPort, String input, String[] vargs, String comnd) {
 		switch (comnd) {
 			case "quit":
 				super.killConnection();
@@ -123,18 +144,30 @@ public class P2PNode extends P2PConnection {
 
 			case "add":
 				String file = input.replaceFirst(comnd+"\\s", "");
-				try { table.put(file, Hash.function(file)); }
-				catch (Exception some) { some.printStackTrace(); }
+				table.put(file, Hash.function(file));
+				System.out.println(table.get(file));
 				break;
 
+			case "import":
+				readFile(input.replaceFirst(comnd+"\\s", ""));
+				break;
+
+			case "toggleBeat":
+				super.toggleAlive();
+				break;
+
+
 			case "table":
-				try { System.out.println(table.keySet()); }
-				catch (Exception some) { some.printStackTrace(); }
+				System.out.println("[");
+				for (String key: table.keySet()) {
+				    System.out.println("\t" + key);
+				}
+				System.out.println("]");
 				break;
 
 
 			case "connect":
-				try { super.connect(targetAddress, targetPort); }
+				try { super.connect(targetAddress, targetPort, table); }
 				catch (Exception e)
 					{ e.printStackTrace(); }
 				catch (Error err)
@@ -147,18 +180,20 @@ public class P2PNode extends P2PConnection {
 		}
 	}
 
-	/*
-	 *   Regex due to decompile the message to be sent
-	 */
-	public static String sanitize(String sentence) {
-		System.out.println(sentence);
-		Matcher matcher
-			= Pattern
-				.compile("\".*\"")
-				.matcher(sentence);
+	/* File Manager -------------------------------------------------*/
 
-		if(matcher.find())
-			return matcher.group(0);
-		return null;
+	public void readFile(String filename) {
+		try {
+			File file = new File(filename);
+			Scanner reader = new Scanner(file);
+			while (reader.hasNextLine()) {
+				String data = reader.nextLine();
+				table.put(data, Hash.function(data));
+			}
+			reader.close();
+		} catch (FileNotFoundException e) {
+			System.out.println("An error occurred.");
+			e.printStackTrace();
+		}
 	}
 }

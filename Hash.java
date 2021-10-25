@@ -17,11 +17,14 @@ public class Hash {
 		} catch (Exception ignore) {}
 	}
 
-	public static String function(String in) throws Exception {
+	public static String function(String in) {
 		if(instance == null)
 			instance = new Hash();
 
-	    byte hash[] = algorithm.digest(in.getBytes("UTF-8"));
+		byte[] hash = null;
+		try {
+	    	hash = algorithm.digest(in.getBytes("UTF-8"));
+		} catch (Exception ignore) {}
 
 	    StringBuilder text = new StringBuilder();
 	    for (byte b : hash) {

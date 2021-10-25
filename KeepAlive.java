@@ -15,13 +15,12 @@ public class KeepAlive extends Thread {
 
 		alive = true;
 		data = null;
-		LOG = false;
 	}
 
-	public void toggleLog() { LOG = !LOG; }
+	public void toggleAlive() { alive = !alive; }
 
 	public void setTarget(InetAddress targetAddress, Integer targetPort) {
-		data 	= ("heartbeat>" + socket.getLocalPort()).getBytes();
+		data 	= ("heartbeat").getBytes();
 		packet 	= new DatagramPacket(
 			data,
 			data.length,
@@ -43,9 +42,6 @@ public class KeepAlive extends Thread {
 			try {
 				Thread.sleep(P2PNode.timeout);
 			} catch(InterruptedException ignore) {}
-
-			if(LOG)
-				System.out.println("\npulse!");
 		}
 	}
 }
