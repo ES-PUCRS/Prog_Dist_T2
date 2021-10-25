@@ -1,16 +1,19 @@
+import java.util.concurrent.*;
 import java.util.*;
 import java.net.*;
 import java.io.*;
 
 public class P2PConnection extends KeepAlive {
 	
-	protected volatile DatagramSocket socket;
-	protected final P2PTYPE nodeType;
+	private volatile DatagramSocket socket;
+	private final P2PTYPE nodeType;
 
-	protected InetAddress targetAddress;
-	protected Integer targetPort;
+	private InetAddress targetAddress;
+	private Integer targetPort;
 
-	protected boolean enabled;
+	private Semaphore receivedReply;
+
+	private boolean enabled;
 
 	public P2PConnection(DatagramSocket socket, P2PTYPE nodeType)
 	throws IOException {
@@ -20,13 +23,20 @@ public class P2PConnection extends KeepAlive {
 		this.socket = socket;
 		this.nodeType = nodeType;
 		
+		receivedReply = new Semaphore(1);
 		new Thread(watchdog).start();
+
+		receivedReply.acquire();
 	}
 
-	public void connect(InetAddress targetAddress, Integer targetPort) {
+	public void connect(InetAddress targetAddress, Integer targetPort)
+	throws InterruptedException {
 		send(targetAddress, targetPort, "lookup");
 
+		receivedReply.acquire();
 
+		System.out.println("LOOKBACK");
+		
 		// super.setTarget(targetAddress, targetPort);
 		// super.start();
 	}
@@ -69,7 +79,11 @@ public class P2PConnection extends KeepAlive {
 
 		switch (method) {
 			case "lookup":
-				send(packet, nodeType.toString());
+				send(packet, "lookup:"+nodeType.toString());
+				break;
+			case "lookup:REGULAR":
+			case "lookup:SUPER":
+				receivedReply.release();
 				break;
 			default:
 		}
