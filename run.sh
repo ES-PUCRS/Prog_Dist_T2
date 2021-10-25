@@ -1,10 +1,10 @@
 #!/bin/bash
 
 
-supernode_ip="127.0.0.1"
-supernode_port="52369"
+supernode_ip="192.168.100.5"
+supernode_port="9050"
 
-localport=9090
+localport=9040
 
 
 
@@ -24,6 +24,7 @@ then
 
 	if [[ $1 -eq "" ]]
 	then
+		echo ARGS: $args
 		java -cp ./_class P2PNode $args
 	elif [[ $1 -eq "-1" ]]
 	then

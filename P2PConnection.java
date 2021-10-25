@@ -10,7 +10,6 @@ public class P2PConnection extends KeepAlive {
 	protected InetAddress targetAddress;
 	protected Integer targetPort;
 
-	protected Thread watchdogThread;
 	protected boolean enabled;
 
 	public P2PConnection(DatagramSocket socket, P2PTYPE nodeType)
@@ -18,12 +17,15 @@ public class P2PConnection extends KeepAlive {
 		super(socket);
 		enabled = true;
 
+		this.socket = socket;
 		this.nodeType = nodeType;
-		watchdogThread = new Thread(watchdog);
+		
+		new Thread(watchdog).start();
 	}
 
 	public void connect(InetAddress targetAddress, Integer targetPort) {
 		send(targetAddress, targetPort, "lookup");
+
 
 		// super.setTarget(targetAddress, targetPort);
 		// super.start();

@@ -7,14 +7,14 @@ public class P2PNode extends P2PConnection {
 
 	public static int timeout = 5000;
 
-	public P2PNode (InetAddress targetAddress, Integer targetPort, DatagramSocket socket, P2PTYPE nodeType)
+	public P2PNode (DatagramSocket socket, P2PTYPE nodeType)
 	throws IOException {
 		super(socket, nodeType);
 	}
 
 	public static void main(String args[]) throws IOException {
-		if (args.length != 3) {
-			System.out.println("Correct call: java P2PNode <super node ip:port> <Node type (super/regular)> <localport>");
+		if (args.length < 2 || args.length > 3) {
+			System.out.println("Correct call: java P2PNode <Node type (super/regular)> <localport> [super node ip:port]");
 			return;
 		}
 
@@ -24,9 +24,10 @@ public class P2PNode extends P2PConnection {
 		P2PTYPE nodeType = null;
 
 		try {
-
-			targetAddress = InetAddress.getByName(args[0].split(":")[0]);
-			targetPort = Integer.parseInt(args[0].split(":")[1]);
+			if(args.length == 3) {
+				targetAddress = InetAddress.getByName(args[0].split(":")[0]);
+				targetPort = Integer.parseInt(args[0].split(":")[1]);
+			}
 			socket = new DatagramSocket(Integer.parseInt(args[2]));
 			nodeType = P2PTYPE.valueOf(args[1].toUpperCase());
 
@@ -47,11 +48,20 @@ public class P2PNode extends P2PConnection {
 			return;
 		}
 
-		P2PNode node = new P2PNode(targetAddress, targetPort, socket, nodeType);
-		node.script();
+		System.out.println("ECHO: " + targetAddress);
+
+		new P2PNode(socket, nodeType)
+			.script(targetAddress, targetPort);
 	}
 
-	private void script() {
+	private void script(InetAddress targetAddress, Integer targetPort) {
+		while(true) {
+			Scanner in = new Scanner(System.in);
+			String input = in.nextLine();
+			super.connect(targetAddress, targetPort);
+			if(input.equals("quit"))
+				break;
+		}
 
 	}
 
