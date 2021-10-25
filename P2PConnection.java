@@ -16,12 +16,13 @@ public class P2PConnection extends KeepAlive {
 	private Semaphore receivedReply;
 	private boolean hearbeatLog;
 	private boolean enabled;
-	private boolean DEBUG = false;
+	private boolean DEBUG = true;
 
     
 	/* Thread access */
 	protected final String not_found = "!METHOD NOT FOUND!";
-	protected volatile DatagramPacket receivedPacket;
+	protected volatile String receivedPacketSource;
+	protected volatile String receivedPacketData;
 	protected volatile String response;
 
 	private Map<String, Node> table;
@@ -51,7 +52,8 @@ public class P2PConnection extends KeepAlive {
 		super(socket);
 		this.enabled = true;
 		this.hearbeatLog = false;
-		this.receivedPacket = null;
+		this.receivedPacketData = null;
+		this.receivedPacketSource = null;
 
 		this.socket = socket;
 		this.response = "";
@@ -213,28 +215,36 @@ public class P2PConnection extends KeepAlive {
 
 		@Override
 		public void run() {
-			String data = trimPacketData(receivedPacket);
-			String msg = receivedPacket.getAddress() + ":" + receivedPacket.getPort() + "> " + data;
+			String[] vars = receivedPacketSource.split(":");
+			DatagramPacket receivedPacket = null;
+			try {
+				receivedPacket = createPacket(
+					InetAddress.getByName(vars[0].substring(0, vars[0].length())),
+					Integer.parseInt(vars[1]),
+					receivedPacketData
+				);
+			} catch (Exception e) { e.printStackTrace(); }
+			String msg = receivedPacketSource + "> " + receivedPacketData;
 			if (msg.length() > 70) msg = msg.substring(0,70) + "...";
-			if( ( 		!data.contains("heartbeat")
-					&&  !data.contains(":fail")
-					&&  !data.contains(":ok")
+			if( ( 		!receivedPacketData.contains("heartbeat")
+					&&  !receivedPacketData.contains(":fail")
+					&&  !receivedPacketData.contains(":ok")
 				)
 				|| hearbeatLog || DEBUG
 			)
 				System.out.println(msg);
 
-			String[] vargs = data.split(">");
+			String[] vargs = receivedPacketData.split(">");
 			String 	 method = "";
 
 			try {
 				method = vargs[0];
 			} catch (ArrayIndexOutOfBoundsException aioobe) {
-				method = data;
+				method = receivedPacketData;
 			}
 
 			if(method.equals("not_found"))
-				throw new AssertionError(data);
+				throw new AssertionError(receivedPacketData);
 			else
 			switch (method) {
 				case "looktype":
@@ -348,6 +358,8 @@ public class P2PConnection extends KeepAlive {
     }
 
 	private Runnable watchdog = new Runnable() {
+
+		@Override
 		public void run() {
 			byte[] data = new byte[1024];
 			DatagramPacket received =
@@ -355,7 +367,8 @@ public class P2PConnection extends KeepAlive {
 			while(enabled) {
 				try {
 					socket.receive(received);
-					receivedPacket = clonePacket(received);
+					receivedPacketSource = packetKey(received);
+					receivedPacketData = trimPacketData(received);
 					new Thread(router).start();
 				} catch (Exception e) { e.printStackTrace(); }
 
@@ -365,6 +378,7 @@ public class P2PConnection extends KeepAlive {
 			if(socket != null)
 				socket.close();
 		}
+
 	};
 
 	/* Auxiliar methods -------------------------------------------------*/
