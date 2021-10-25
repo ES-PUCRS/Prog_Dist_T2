@@ -15,7 +15,7 @@ public class P2PConnection extends KeepAlive {
 	private Integer targetPort;
 
 	private Semaphore receivedReply;
-	private boolean heartbeat;
+	private boolean hearbeatLog;
 	private boolean enabled;
 	private boolean DEBUG = false;
 
@@ -40,11 +40,12 @@ public class P2PConnection extends KeepAlive {
 		}
 	}
 
+	Thread kennel = null;
 	public P2PConnection (DatagramSocket socket, P2PTYPE nodeType)
 	throws IOException {
 		super(socket);
 		this.enabled = true;
-		this.heartbeat = false;
+		this.hearbeatLog = false;
 
 		this.socket = socket;
 		this.response = "";
@@ -55,14 +56,26 @@ public class P2PConnection extends KeepAlive {
 		}
 
 		receivedReply = new Semaphore(1);
-		new Thread(watchdog).start();
+		kennel = new Thread(watchdog);
+		kennel.start();
 
 		try { receivedReply.acquire(); }
 		catch(InterruptedException ie) {}
 	}
 
 	/* Console Access ---------------------------------------------------------*/
-	
+
+	public void status() {
+		System.out.println(
+			"Watchdog enabled: " 	+ enabled + 
+			"\nKennel isAlive: " 	+ kennel.isAlive() +
+			"\n\tstate: " 		 	+ kennel.getState() +
+			"\nSemaphore permits: " + receivedReply.availablePermits() +
+			"\nTarget: "				+ targetAddress+":"+targetPort +
+			"\n "
+		);
+	}
+
 	public void killConnection() {
 		enabled = false;
 		socket.close();
@@ -73,7 +86,7 @@ public class P2PConnection extends KeepAlive {
 		// if(DEBUG)
 		System.out.println(
 			"Stablishing connection to "+ targetAddress +":"+targetPort+
-			"("+receivedReply.availablePermits()+")"
+			" ("+receivedReply.availablePermits()+")"
 		);
 
 		send(targetAddress, targetPort, "looktype");
@@ -93,23 +106,24 @@ public class P2PConnection extends KeepAlive {
 		// 3º
 		// If the connection is a new regular node, import the files
 		// If is a super node, reorganize the network topology
-		if(table != null)
+		if(table != null) {
 			for (Map.Entry<String, String> entry: table.entrySet()) {
 			    send(targetAddress, targetPort, "include>"+entry.getValue());
 				receivedReply.acquire();
 			}
-		else
+		} else {
 			send(targetAddress, targetPort,
 				("topology>"+
 					targetAddress+":"+targetPort +">"+
 					getLocalAddress()+":"+socket.getLocalPort()
 				)
 			);
+		}
 
 		return true;
 	}
 
-	public void toggleLog() { heartbeat = !heartbeat; }
+	public void toggleLog() { hearbeatLog = !hearbeatLog; }
 	public void toggleAlive() { super.toggleAlive(); }
 
 	public String table() {
@@ -182,7 +196,7 @@ public class P2PConnection extends KeepAlive {
 				&&  !data.contains(":fail")
 				&&  !data.contains(":ok")
 			)
-			|| heartbeat || DEBUG
+			|| hearbeatLog || DEBUG
 		)
 			System.out.println(msg);
 

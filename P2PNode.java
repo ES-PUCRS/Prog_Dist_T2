@@ -103,7 +103,7 @@ public class P2PNode extends P2PConnection {
 			String[] vargs = null;
 			String   input = null;
 			String   comnd = null;
-			
+
 			do {
 				input = comnd = null;
 				vargs = null;
@@ -125,6 +125,10 @@ public class P2PNode extends P2PConnection {
 
 	private void superConsole(InetAddress targetAddress, Integer targetPort, String input, String[] vargs, String comnd) {
 		switch (comnd) {
+			case "status":
+				super.status();
+				break;
+
 			case "quit":
 				super.killConnection();
 				break;
