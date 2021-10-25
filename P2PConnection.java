@@ -1,4 +1,6 @@
 import java.util.concurrent.*;
+import java.util.TimerTask;
+import java.util.Timer;
 import java.util.*;
 import java.net.*;
 import java.io.*;
@@ -16,7 +18,22 @@ public class P2PConnection extends KeepAlive {
 	private boolean heartbeat;
 	private boolean enabled;
 
-	private Map<String, List<String>> table;
+	private Map<String, Node> table;
+
+	class Node {
+		List<String> content;
+		TimerTask task;
+		Timer timer;
+
+		public Node() {
+			content = new LinkedList<String>();
+			timer = null;
+			task = null;
+		}
+		public String toString() {
+			return Arrays.toString(content.toArray());
+		}
+	}
 
 	public P2PConnection (DatagramSocket socket, P2PTYPE nodeType)
 	throws IOException {
@@ -28,8 +45,9 @@ public class P2PConnection extends KeepAlive {
 		this.response = "";
 		this.nodeType = nodeType;
 
-		if(nodeType == P2PTYPE.SUPER)
-			table = new HashMap<String, List<String>>();
+		if(nodeType == P2PTYPE.SUPER) {
+			table = new HashMap<String, Node>();
+		}
 
 		receivedReply = new Semaphore(1);
 		new Thread(watchdog).start();
@@ -71,6 +89,10 @@ public class P2PConnection extends KeepAlive {
 	public void toggleLog() { heartbeat = !heartbeat; }
 	public void toggleAlive() { super.toggleAlive(); }
 
+	public String table() {
+		return table.toString();
+	}
+
 	/* Sockets Access---------------------------------------------------------*/
 	
 	public void include (DatagramPacket packet) {
@@ -82,7 +104,7 @@ public class P2PConnection extends KeepAlive {
 			return;
 		}
 
-		table.get(key).add(hash);
+		table.get(key).content.add(hash);
 
 		send(packet, "include:ok");
 	}
@@ -90,8 +112,10 @@ public class P2PConnection extends KeepAlive {
 	public void connect (DatagramPacket packet) {
 		String key = packetKey(packet);
 
-		if(!table.containsKey(key))
-			table.put(key, new LinkedList<String>());
+		if(!table.containsKey(key)){
+			table.put(key, new Node());
+		}
+
 		
 		send(packet, "connect:ok");
 	}
@@ -105,15 +129,15 @@ public class P2PConnection extends KeepAlive {
 	private final String not_found = "!METHOD NOT FOUND!";
 	private void router (DatagramPacket packet) {
 		String data = trimPacketData(packet);
+		String msg = packet.getAddress() + ":" + packet.getPort() + "> " + data;
+		if (msg.length() > 50) msg = msg.substring(0,70) + "...";
 		if( ( 		!data.contains("heartbeat")
 				&&  !data.contains(":fail")
 				&&  !data.contains(":ok")
 			)
 			|| heartbeat
 		)
-			System.out.println(
-				packet.getAddress() + ":" + packet.getPort() + "> " + data
-			);
+			System.out.println(msg);
 
 		String method = "";
 
@@ -155,8 +179,12 @@ public class P2PConnection extends KeepAlive {
 				receivedReply.release();
 				break;
 
+
 			case "heartbeat":
+			String key = packetKey(packet);
+				heart(key);
 				break;
+
 
 			default:
 			try {
@@ -169,6 +197,31 @@ public class P2PConnection extends KeepAlive {
 	}
 
 	/* Runnable Threads -------------------------------------------------*/
+
+	public void heart(String key) {
+		Node node = table.get(key);
+		TimerTask task = node.task;
+		Timer timer = node.timer;
+	    if(timer != null) {
+            task.cancel();
+            timer.cancel();
+            timer.purge();
+        }
+
+        task = new TimerTask() {
+            @Override
+            public void run() {
+            	System.out.println("System: Dropping node>"+key);
+                table.remove(key);
+            }
+        };
+        
+        timer = new Timer();
+        timer.schedule(task, P2PNode.timeout);
+        node.timer = timer;
+        node.task = task;
+        table.put(key, node);
+    }
 
 	private Runnable watchdog = new Runnable() {
 		public void run() {

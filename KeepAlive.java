@@ -40,7 +40,7 @@ public class KeepAlive extends Thread {
 			} catch (IOException ioe) {}
 			
 			try {
-				Thread.sleep(P2PNode.timeout);
+				Thread.sleep(P2PNode.timeout-2000);
 			} catch(InterruptedException ignore) {}
 		}
 	}

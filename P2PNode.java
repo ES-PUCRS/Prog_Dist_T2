@@ -111,14 +111,14 @@ public class P2PNode extends P2PConnection {
 				break;
 
 			case "table":
-				System.out.println(table);
+				System.out.println(super.table());
 				break;
 
-			case "toggleBeatLog":
+			case "toggleBeatsLog":
 				super.toggleLog();
 				break;
 
-			case "toggleBeat":
+			case "toggleBeats":
 				super.toggleAlive();
 				break;
 
@@ -152,7 +152,7 @@ public class P2PNode extends P2PConnection {
 				readFile(input.replaceFirst(comnd+"\\s", ""));
 				break;
 
-			case "toggleBeat":
+			case "toggleBeats":
 				super.toggleAlive();
 				break;
 
