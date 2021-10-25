@@ -157,6 +157,7 @@ public class P2PConnection extends KeepAlive {
 	
 	public void topology (DatagramPacket packet, String target, String dst) {
 		String key = this.targetAddress+":"+this.targetPort;
+		if(target.equals(getLocalAddress()+":"+socket.getLocalPort())) return;
 		if(target.equals(key) || (this.targetAddress == null && this.targetPort == null)) {
 			String[] args = dst.split(":");
 			try {
@@ -245,7 +246,7 @@ public class P2PConnection extends KeepAlive {
 			switch (method) {
 				case "looktype":
 					DatagramPacket pckt = createPacket(receivedPacket, "looktype:" + nodeType.toString());
-					waitResponse(pckt);
+					// waitResponse(pckt);
 					send(pckt);
 					break;
 				case "looktype:REGULAR":
@@ -285,7 +286,7 @@ public class P2PConnection extends KeepAlive {
 					break;
 
 				case "confirmation":
-					waitResponse(null);
+					// waitResponse(null);
 					break;
 
 				default:
@@ -299,31 +300,31 @@ public class P2PConnection extends KeepAlive {
 
 	/* Runnable Threads -------------------------------------------------*/
 
-	TimerTask taskResponse = null;
-	Timer timerResponse = null;
-	public void waitResponse(DatagramPacket packet) {
-	    if(timerResponse != null) {
-            taskResponse.cancel();
-            timerResponse.cancel();
-            timerResponse.purge();
-        }
+	// TimerTask taskResponse = null;
+	// Timer timerResponse = null;
+	// public void waitResponse(DatagramPacket packet) {
+	//     if(timerResponse != null) {
+ //            taskResponse.cancel();
+ //            timerResponse.cancel();
+ //            timerResponse.purge();
+ //        }
 
-        taskResponse = new TimerTask() {
-            @Override
-            public void run() {
-            	System.out.println("Sending the packet again");
-                send(packet);
-                waitResponse(packet);
-            }
-        };
+ //        taskResponse = new TimerTask() {
+ //            @Override
+ //            public void run() {
+ //            	System.out.println("Sending the packet again");
+ //                send(packet);
+ //                waitResponse(packet);
+ //            }
+ //        };
 
-        if(packet != null) {
-	        timerResponse = new Timer();
-	        timerResponse.schedule(taskResponse, P2PNode.timeout);
-    	} else {
-    		System.out.println("Response received");
-    	}
-    }
+ //        if(packet != null) {
+	//         timerResponse = new Timer();
+	//         timerResponse.schedule(taskResponse, P2PNode.timeout);
+ //    	} else {
+ //    		System.out.println("Response received");
+ //    	}
+ //    }
 
 	public void heart(String key) {
 		Node node = table.get(key);
