@@ -48,8 +48,6 @@ public class P2PNode extends P2PConnection {
 			return;
 		}
 
-		System.out.println("ECHO: " + targetAddress);
-
 		new P2PNode(socket, nodeType)
 			.script(targetAddress, targetPort);
 	}

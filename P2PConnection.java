@@ -41,9 +41,6 @@ public class P2PConnection extends KeepAlive {
 			DatagramPacket received =
 				new DatagramPacket(data, data.length);
 			while(enabled) {
-				if(!socket.isConnected())
-					break;
-
 				try {
 					socket.receive(received);
 					router(clonePacket(received));
@@ -54,7 +51,8 @@ public class P2PConnection extends KeepAlive {
 				
 				Arrays.fill(data, (byte) 0);
 			}
-			if(socket.isConnected())
+			
+			if(socket != null)
 				socket.close();
 		}
 	};
@@ -90,6 +88,7 @@ public class P2PConnection extends KeepAlive {
 		DatagramPacket packet = createPacket(targetAddress, targetPort, content);
 		try { socket.send(packet); }
 		catch(IOException ioe) { ioe.printStackTrace(); }
+		System.out.println("SENT");
 	}
 
 	/* Cut packet data String unused */
