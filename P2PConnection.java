@@ -252,13 +252,13 @@ public class P2PConnection extends KeepAlive {
 	TimerTask taskResponse = null;
 	Timer timerResponse = null;
 	public void waitResponse(DatagramPacket packet) {
-	    if(timer != null) {
-            task.cancel();
+	    if(timerResponse != null) {
+            taskResponse.cancel();
             timerResponse.cancel();
             timerResponse.purge();
         }
 
-        task = new TimerTask() {
+        taskResponse = new TimerTask() {
             @Override
             public void run() {
             	System.out.println("Sending the packet again");
