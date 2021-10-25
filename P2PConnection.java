@@ -69,6 +69,7 @@ public class P2PConnection extends KeepAlive {
 
 	public boolean connect (InetAddress targetAddress, Integer targetPort, Map<String,String> table)
 	throws InterruptedException, IndexOutOfBoundsException, UnsatisfiedLinkError {
+		System.out.println("Stablishing connection. . .");
 		send(targetAddress, targetPort, "looktype");
 
 		// 1º Validate if it is a supernode 
@@ -116,11 +117,14 @@ public class P2PConnection extends KeepAlive {
 		if(target.equals(key) || (this.targetAddress == null && this.targetPort == null)) {
 			String[] args = dst.split(":");
 			try {
-				connect(InetAddress.getByName(args[0]), Integer.parseInt(args[1]), null);
-			} catch (Exception e) {}
+				connect(InetAddress.getByName(args[0].substring(1, args[0].length())), Integer.parseInt(args[1]), null);
+			} catch (Exception e) { e.printStackTrace(); }
 		} else {
 			send(createPacket("topology>"+target+">"+dst));
 		}
+
+		System.out.println("address:: " + this.targetAddress);
+		System.out.println("port:: " + this.targetPort);
 	}
 
 	public void include (DatagramPacket packet) {
