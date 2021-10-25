@@ -158,20 +158,38 @@ public class P2PConnection extends KeepAlive {
 	public void topology (DatagramPacket packet, String target, String dst) {
 		String key = this.targetAddress+":"+this.targetPort;
 
-		System.out.println("Key: " + key);
-		System.out.println(target + " == key: " + target.equals(key));
+		System.out.println("----------------------------------");
+		System.out.println("Local Key: " + key);
+		System.out.println("target(" + target + ") == key("+key+"): " + target.equals(key));
 		System.out.println("targetAddress: " + this.targetAddress);
 		System.out.println("targetPort: " + this.targetPort);
+		System.out.println(target.equals(key) +" || "+ (this.targetAddress == null && this.targetPort == null));
+		System.out.println("----------------------------------");
 
-		// if(target.equals(getLocalAddress()+":"+socket.getLocalPort())) return;
+		if(key.equals(dst)) return;
 		if(target.equals(key) || (this.targetAddress == null && this.targetPort == null)) {
 			String[] args = dst.split(":");
 			try {
-				connect(
-					InetAddress.getByName(args[0].substring(1, args[0].length())),
-					Integer.parseInt(args[1]),
-					null
-				);
+
+			System.out.println("Removing: " + key);
+			table.remove(key);
+			this.targetAddress = InetAddress.getByName(args[0].substring(1, args[0].length()));
+			this.targetPort = Integer.parseInt(args[1]);
+			table.put(key(), new Node());
+			
+			System.out.println("New connecting pair: " + targetAddress + ":" + targetPort);
+			// send(
+			// 	this.targetAddress,
+			// 	this.targetPort,
+			// 	"connect"
+			// );
+
+			System.out.println("----------------------------------");
+			// 	connect(
+			// 		InetAddress.getByName(args[0].substring(1, args[0].length())),
+			// 		Integer.parseInt(args[1]),
+			// 		null
+			// 	);
 			} catch (Exception e) { e.printStackTrace(); }
 		} else {
 			send(createPacket("topology>"+target+">"+dst));
@@ -200,6 +218,7 @@ public class P2PConnection extends KeepAlive {
 	public void connect (DatagramPacket packet) {
 		String key = packetKey(packet);
 
+		System.out.println("Connected with: " + packetKey(packet));
 		if(!table.containsKey(key)) {
 			table.put(key, new Node());
 		}
@@ -324,7 +343,7 @@ public class P2PConnection extends KeepAlive {
         timer.schedule(task, P2PNode.timeout);
         node.timer = timer;
         node.task = task;
-        table.put(key, node);
+        // table.put(key, node);
     }
 
 	private Runnable watchdog = new Runnable() {
@@ -352,6 +371,11 @@ public class P2PConnection extends KeepAlive {
 	};
 
 	/* Auxiliar methods -------------------------------------------------*/
+
+	/* Generate a map key by concatenating address and port */
+	private String key() {
+		return this.targetAddress + ":" + this.targetPort;
+	}
 
 	/* Generate a map key by concatenating address and port */
 	private String packetKey(DatagramPacket packet) {

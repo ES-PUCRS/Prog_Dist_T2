@@ -18,17 +18,19 @@ then
 
 	elif [[ $1 -eq "1" ]]
 	then
-		xterm -geometry 76x20+718+50  -T "$localtype_1 NODE 1" -ls -e $LOAD$args_1 &
+		xterm -geometry $uppers_window  -T "$localtype_1 NODE 1> $localport_1" -ls -e $LOAD$args_1 &
 		sleep 2
 		xterm -T "$localtype_2 NODE 2" -ls -e $LOAD$args_2 &
 
 	elif [[ $1 -eq "2" ]]
 	then
-		xterm -T 76x20+718+50 "$localtype_1 NODE 1" -ls -e $LOAD$args_1 &
-		sleep 3
-		xterm -T "$localtype_2 NODE 2" -ls -e $LOAD$args_2 &
-		sleep 3
-		xterm -T 76x20+718+300"$localtype_3 NODE 3" -ls -e $LOAD$args_3 &
+		xterm -geometry $uppers_window  -T "$localtype_1 NODE 1> $localport_1" -ls -e $LOAD$args_1 &
+		sleep 2
+
+		xterm -T "$localtype_2 NODE 2> $localport_2" -ls -e $LOAD$args_2 &
+		sleep 2
+		
+		xterm -geometry $lower_window -T "$localtype_3 NODE 3> $localport_3" -ls -e $LOAD$args_3 &
 
 	elif [[ $1 -eq "clear" ]]
 	then
