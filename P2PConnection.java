@@ -10,6 +10,9 @@ public class P2PConnection extends KeepAlive {
 	private volatile DatagramSocket socket;
 	private final P2PTYPE nodeType;
 
+	private InetAddress replacedTargetAddress;
+	private Integer replacedTargetPort;
+
 	private InetAddress targetAddress;
 	private Integer targetPort;
 
@@ -119,11 +122,14 @@ public class P2PConnection extends KeepAlive {
 		if(P2PTYPE.valueOf(response.split(":")[1]) != P2PTYPE.SUPER)
 			throw new UnsatisfiedLinkError("Cannot connect with a regular node!");
 		send(targetAddress, targetPort, "connect");
-		this.targetAddress = targetAddress;
-		this.targetPort = targetPort;
+		updateTarget(targetAddress, targetPort);
+
 
 		// 2º Checkin connection and activate KeepAlive
 		receivedReply.acquire();
+		if(!this.table.containsKey(currentTarget())) {
+			this.table.put(currentTarget(), new Node());
+		}
 		super.setTarget(targetAddress, targetPort);
 
 		// 3º
@@ -135,10 +141,13 @@ public class P2PConnection extends KeepAlive {
 				receivedReply.acquire();
 			}
 		} else {
+			if(DEBUG)
+				System.out.println("THROWING TYPOLOGY:\n\t"+targetAddress+":"+targetPort +"\n\t"+
+					local());
 			send(targetAddress, targetPort,
 				("topology>"+
 					targetAddress+":"+targetPort +">"+
-					getLocalAddress()+":"+socket.getLocalPort()
+					local()
 				)
 			);
 		}
@@ -150,50 +159,25 @@ public class P2PConnection extends KeepAlive {
 	public void toggleAlive() { super.toggleAlive(); }
 
 	public String table() {
-		return table.toString();
+		return "TARGET: "+currentTarget()+"\n" + table.toString();
 	}
 
 	/* Sockets Access---------------------------------------------------------*/
 	
 	public void topology (DatagramPacket packet, String target, String dst) {
-		String key = this.targetAddress+":"+this.targetPort;
+		String currentTarget = currentTarget();
+		String oldTarget = oldTarget();
+		String local = local();
 
-		System.out.println("----------------------------------");
-		System.out.println("Local Key: " + key);
-		System.out.println("target(" + target + ") == key("+key+"): " + target.equals(key));
-		System.out.println("targetAddress: " + this.targetAddress);
-		System.out.println("targetPort: " + this.targetPort);
-		System.out.println(target.equals(key) +" || "+ (this.targetAddress == null && this.targetPort == null));
-		System.out.println("----------------------------------");
-
-		if(key.equals(dst)) return;
-		if(target.equals(key) || (this.targetAddress == null && this.targetPort == null)) {
-			String[] args = dst.split(":");
-			try {
-
-			System.out.println("Removing: " + key);
-			table.remove(key);
-			this.targetAddress = InetAddress.getByName(args[0].substring(1, args[0].length()));
-			this.targetPort = Integer.parseInt(args[1]);
-			table.put(key(), new Node());
-			
-			System.out.println("New connecting pair: " + targetAddress + ":" + targetPort);
-			// send(
-			// 	this.targetAddress,
-			// 	this.targetPort,
-			// 	"connect"
-			// );
-
-			System.out.println("----------------------------------");
-			// 	connect(
-			// 		InetAddress.getByName(args[0].substring(1, args[0].length())),
-			// 		Integer.parseInt(args[1]),
-			// 		null
-			// 	);
-			} catch (Exception e) { e.printStackTrace(); }
+		if(local.equals(dst)) return;
+	
+		if(target.equals(currentTarget)) {
+			updateTarget(dst);
+			send("connect");
 		} else {
-			send(createPacket("topology>"+target+">"+dst));
+			send("topology>" + target + ">" + dst);
 		}
+	
 	}
 
 	public void include (DatagramPacket packet) {
@@ -218,8 +202,21 @@ public class P2PConnection extends KeepAlive {
 	public void connect (DatagramPacket packet) {
 		String key = packetKey(packet);
 
-		System.out.println("Connected with: " + packetKey(packet));
+		if(DEBUG)
+			System.out.println("Connected with: " + packetKey(packet));
+		if(currentTarget().equals("null:null")){
+			updateTarget(packet.getAddress(), packet.getPort());
+		}
 		if(!table.containsKey(key)) {
+			for (Map.Entry<String, Node> entry: table.entrySet()) {
+				if(entry.getValue().content == null){
+					Node n = table.get(entry.getKey());
+					if(n.timer != null) n.timer.cancel();
+					if(n.task != null) n.task.cancel();
+					table.remove(entry.getKey());
+					break;
+				}
+			}
 			table.put(key, new Node());
 		}
 
@@ -372,9 +369,33 @@ public class P2PConnection extends KeepAlive {
 
 	/* Auxiliar methods -------------------------------------------------*/
 
+
+	public void updateTarget(String target) {
+		String vargs[] = target.split(":");
+		try {
+			updateTarget(
+				InetAddress.getByName(vargs[0].substring(1, vargs[0].length())),
+				Integer.parseInt(vargs[1])
+			);
+		} catch(Exception e) { e.printStackTrace(); }
+	}
+	public void updateTarget(InetAddress targetAddress, Integer targetPort) {
+		this.replacedTargetAddress = this.targetAddress;
+		this.replacedTargetPort = this.targetPort;
+		this.targetAddress = targetAddress;
+		this.targetPort = targetPort;
+	}
+
+
 	/* Generate a map key by concatenating address and port */
-	private String key() {
+	private String oldTarget() {
+		return this.replacedTargetAddress + ":" + this.replacedTargetPort;
+	}
+	private String currentTarget() {
 		return this.targetAddress + ":" + this.targetPort;
+	}
+	private String local() {
+		return getLocalAddress()+":"+socket.getLocalPort();
 	}
 
 	/* Generate a map key by concatenating address and port */
@@ -383,6 +404,9 @@ public class P2PConnection extends KeepAlive {
 	}
 
 	/* Send package to the destination */
+	private void send (String content) {
+		send(createPacket(this.targetAddress, this.targetPort, content));
+	}
 	private void send (DatagramPacket packet, String content)
 	{ send(packet.getAddress(), packet.getPort(), content); }
 	private void send (InetAddress targetAddress, Integer targetPort, String content) {
