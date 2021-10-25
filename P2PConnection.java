@@ -7,6 +7,7 @@ public class P2PConnection extends KeepAlive {
 	
 	private volatile DatagramSocket socket;
 	private final P2PTYPE nodeType;
+	private String response;
 
 	private InetAddress targetAddress;
 	private Integer targetPort;
@@ -21,30 +22,72 @@ public class P2PConnection extends KeepAlive {
 		enabled = true;
 
 		this.socket = socket;
+		this.response = "";
 		this.nodeType = nodeType;
-		
+
 		receivedReply = new Semaphore(1);
 		new Thread(watchdog).start();
 
-		receivedReply.acquire();
+		try { receivedReply.acquire(); }
+		catch(InterruptedException ie) {}
 	}
 
-	public void connect(InetAddress targetAddress, Integer targetPort)
-	throws InterruptedException {
-		send(targetAddress, targetPort, "lookup");
+	public boolean connect(InetAddress targetAddress, Integer targetPort)
+	throws InterruptedException, IndexOutOfBoundsException, UnsatisfiedLinkError {
+		send(targetAddress, targetPort, "looktype");
 
+		// Wait for the response from target node 
 		receivedReply.acquire();
+		if(P2PTYPE.valueOf(response.split(":")[1]) != P2PTYPE.SUPER)
+			throw new UnsatisfiedLinkError("Cannot connect with a regular node!");
 
-		System.out.println("LOOKBACK");
-		
+
+		send(targetAddress, targetPort, "connect>");
 		// super.setTarget(targetAddress, targetPort);
 		// super.start();
+		return true;
 	}
 
 	public void killConnection() {
 		enabled = false;
 		socket.close();
 	}
+
+
+	private void router(DatagramPacket packet) {
+		String data = trimPacketData(packet);
+		System.out.println("Received> " + data);
+		String method = "";
+
+		try {
+			method = data.split(">")[0];
+		} catch (ArrayIndexOutOfBoundsException aioobe) {
+			method = data;
+		}
+
+		switch (method) {
+			case "looktype":
+				send(packet, "looktype:"+nodeType.toString());
+				break;
+
+			case "looktype:REGULAR":
+			case "looktype:SUPER":
+				this.response = trimPacketData(packet);
+				receivedReply.release();
+				break;
+
+			case "connect":
+				//
+				break;
+
+			default:
+				send(packet, "!METHOD NOT FOUND!");
+
+		}
+
+	}
+
+	/* Runnable Threads -------------------------------------------------*/
 
 	private Runnable watchdog = new Runnable() {
 		public void run() {
@@ -65,32 +108,6 @@ public class P2PConnection extends KeepAlive {
 		}
 	};
 
-
-	private void router(DatagramPacket packet) {
-		String data = trimPacketData(packet);
-		System.out.println("Received> " + data);
-		String method = "";
-
-		try {
-			method = data.split(">")[0];
-		} catch (ArrayIndexOutOfBoundsException aioobe) {
-			method = data;
-		}
-
-		switch (method) {
-			case "lookup":
-				send(packet, "lookup:"+nodeType.toString());
-				break;
-			case "lookup:REGULAR":
-			case "lookup:SUPER":
-				receivedReply.release();
-				break;
-			default:
-		}
-
-	}
-
-
 	/* Auxiliar methods -------------------------------------------------*/
 
 	/* Send package to the destination */
@@ -100,7 +117,7 @@ public class P2PConnection extends KeepAlive {
 		DatagramPacket packet = createPacket(targetAddress, targetPort, content);
 		try { socket.send(packet); }
 		catch(IOException ioe) { ioe.printStackTrace(); }
-		System.out.println("SENT");
+		System.out.println("SENT " + receivedReply.availablePermits());
 	}
 
 	/* Cut packet data String unused */

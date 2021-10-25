@@ -13,15 +13,21 @@ then
 
 	if [[ $1 -eq "" ]]
 	then
-		echo ARGS: $args
-		java -cp ./_class P2PNode $args
-	elif [[ $1 -eq "-1" ]]
+		echo ARGS: $args_1
+		$LOAD $args_1
+
+	elif [[ $1 -eq "0" ]]
 	then
-		xterm -T "RMISemaphore" -ls -e $semaphore_command &
+		echo ARGS: $args_1
+		xterm -T "$localtype_1 NODE 1" -ls -e $LOAD$args_1 &
+
+	elif [[ $1 -eq "1" ]]
+	then
+		xterm -T "$localtype_1 NODE 1" -ls -e $LOAD$args_1 &
 		sleep 3
-		xterm -T "RMIServer" -ls -e $server_command &
+		xterm -T "$localtype_2 NODE 2" -ls -e $LOAD$args_2 &
 		sleep 3
-		xterm -T "RMIClient" -ls -e $client_command &
+		xterm -T "$localtype_3 NODE 3" -ls -e $LOAD$args_3 &
 
 	elif [[ $1 -eq "clear" ]]
 	then

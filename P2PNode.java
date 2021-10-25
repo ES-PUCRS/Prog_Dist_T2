@@ -1,6 +1,20 @@
+import java.security.MessageDigest;
 import java.util.*;
 import java.net.*;
 import java.io.*;
+
+enum P2PTYPE  {
+    REGULAR("REGULAR"), SUPER("SUPER");
+
+    private String type;
+    P2PTYPE(String type) {
+        this.type = type;
+    }
+
+    public String toString() {
+        return this.type;
+    }
+}
 
 
 public class P2PNode extends P2PConnection {
@@ -53,32 +67,44 @@ public class P2PNode extends P2PConnection {
 	}
 
 	private void script(InetAddress targetAddress, Integer targetPort) {
-		Scanner in = new Scanner(System.in);
-		String input = "";
-		
-		while(true) {
-			input = in.nextLine();
-			if(input.equals("quit")){
-				super.killConnection();
-				break;
-			}
+		Scanner  in = new Scanner(System.in);
+		String[] input = null;
+		String   comnd = "";
 
-			super.connect(targetAddress, targetPort);
+		while(true) {
+			input = in.nextLine().split("\\s");
+			comnd = input[0];
+
+			switch (comnd) {
+				case "quit":
+					super.killConnection();
+					break;
+
+				case "hash":
+					try { System.out.println(gerarHash(input[1])); }
+					catch (Exception some) { some.printStackTrace(); }
+					break;
+
+				case "connect":
+					try { super.connect(targetAddress, targetPort); }
+					catch (Exception e)
+						{ e.printStackTrace(); }
+					catch (Error err)
+						{ System.out.println(err.getClass().getSimpleName() + ": "+ err.getLocalizedMessage()); }
+			}
 		}
 
 	}
 
-}
+	public static String hash(String in) throws Exception {
+	    MessageDigest algorithm = MessageDigest.getInstance("SHA-256");
+	    byte hash[] = algorithm.digest(in.getBytes("UTF-8"));
 
-enum P2PTYPE  {
-    REGULAR("REGULAR"), SUPER("SUPER");
+	    StringBuilder text = new StringBuilder();
+	    for (byte b : hash) {
+	      text.append(String.format("%02X", 0xFF & b));
+	    }
+	    return text.toString();
+  	}
 
-    private String type;
-    P2PTYPE(String type) {
-        this.type = type;
-    }
-
-    public String toString() {
-        return this.type;
-    }
 }
