@@ -17,6 +17,7 @@ public class P2PConnection extends KeepAlive {
 	private Semaphore receivedReply;
 	private boolean heartbeat;
 	private boolean enabled;
+	private boolean DEBUG = true;
 
 	private Map<String, Node> table;
 
@@ -176,7 +177,7 @@ public class P2PConnection extends KeepAlive {
 				&&  !data.contains(":fail")
 				&&  !data.contains(":ok")
 			)
-			|| heartbeat || true
+			|| heartbeat || DEBUG
 		)
 			System.out.println(msg);
 
@@ -197,11 +198,10 @@ public class P2PConnection extends KeepAlive {
 				DatagramPacket pckt = createPacket(packet, "looktype:" + nodeType.toString());
 				waitResponse(pckt);
 				send(pckt);
-				System.out.println("SENT looktype:"+nodeType.toString());
 				break;
 			case "looktype:REGULAR":
 			case "looktype:SUPER":
-				waitResponse(null);
+				send(packet, "confirmation");
 				this.response = trimPacketData(packet);
 				System.out.println("RECEIVED: "+ response);
 				receivedReply.release();
@@ -236,6 +236,9 @@ public class P2PConnection extends KeepAlive {
 				heart(key);
 				break;
 
+			case "confirmation":
+				waitResponse(null);
+				break;
 
 			default:
 			try {
@@ -311,9 +314,9 @@ public class P2PConnection extends KeepAlive {
 				try {
 					socket.receive(received);
 					router(clonePacket(received));
-				} catch (IOException ioe) {}
-				data = new byte[1024];
-				// Arrays.fill(data, (byte) 0);
+				} catch (IOException ioe) { ioe.printStackTrace(); }
+
+				Arrays.fill(data, (byte) 0);
 			}
 
 			if(socket != null)
@@ -336,6 +339,8 @@ public class P2PConnection extends KeepAlive {
 		send(packet);
 	}
 	private void send (DatagramPacket packet) {
+		if(DEBUG)
+			System.out.println("send " + trimPacketData(packet));
 		try { socket.send(packet); }
 		catch(IOException ioe) { ioe.printStackTrace(); }
 	}
