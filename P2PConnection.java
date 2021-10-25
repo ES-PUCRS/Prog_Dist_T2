@@ -26,12 +26,16 @@ public class P2PConnection extends KeepAlive {
 		Timer timer;
 
 		public Node() {
-			content = new LinkedList<String>();
+			content = null;
 			timer = null;
 			task = null;
 		}
+
+		@Override
 		public String toString() {
-			return Arrays.toString(content.toArray());
+			if(content != null)
+				return String.valueOf(content.size());
+			return P2PTYPE.SUPER.toString();
 		}
 	}
 
@@ -201,6 +205,8 @@ public class P2PConnection extends KeepAlive {
 
 	public void heart(String key) {
 		Node node = table.get(key);
+		if(node == null) return;
+		
 		TimerTask task = node.task;
 		Timer timer = node.timer;
 	    if(timer != null) {
