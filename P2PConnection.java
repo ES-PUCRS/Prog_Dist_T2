@@ -109,8 +109,13 @@ public class P2PConnection extends KeepAlive {
 			return;
 		}
 
-		table.get(key).content.add(hash);
+		LinkedList<String> list = table.get(key).content;
+		if(list == null){
+			list = new LinkedList<String>();
+			table.get(key).content = list;
+		}
 
+		list.add(hash);
 		send(packet, "include:ok");
 	}
 
@@ -206,7 +211,7 @@ public class P2PConnection extends KeepAlive {
 	public void heart(String key) {
 		Node node = table.get(key);
 		if(node == null) return;
-		
+
 		TimerTask task = node.task;
 		Timer timer = node.timer;
 	    if(timer != null) {
