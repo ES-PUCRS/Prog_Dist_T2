@@ -38,11 +38,11 @@ public class KeepAlive extends Thread {
 				socket.send(packet);
 			} catch (SocketException se) {
 				alive = false;
-			} catch (IOException ioe) {}
+			} catch (Exception e) { e.printStackTrace(); }
 			
 			try {
 				Thread.sleep(P2PNode.timeout-2000);
-			} catch(InterruptedException ignore) {}
+			} catch(InterruptedException ignore) { ignore.printStackTrace(); }
 		}
 	}
 }
